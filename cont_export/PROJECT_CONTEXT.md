@@ -1,14 +1,14 @@
-# PROJECT_CONTEXT.md — Insights Vendas Novacenter
+# PROJECT_CONTEXT.md — Canal do Vendedor Novacenter
 
 ## Objetivo do Projeto
-Sistema de comunicacao com a equipe de vendas da Novacenter. Analise dados de vendas de todas as lojas e distribui insights personalizados para cada vendedor. Cada usuario tera login e senha individuais.
+Portal web + mobile (PWA) para vendedores da Novacenter. Exibe metas, bonus e insights de oportunidades de venda baseados em dados reais. Frontend React (Vite) consumindo views/materialized views do Supabase. Dados de vendas vem de copia diaria do projeto monitor_seek (somente leitura).
 
 ## Empresa
 - **Razao Social:** Centerdiesel Auto Pecas Ltda. / Novacenter
 - **Segmento:** autopecas para caminhao, onibus, automoveis e carretas
 - **Mix:** ~25.000 SKUs, foco OEM e premium
 - **ERP:** Seek (Firebird)
-- **Backend de dados:** Supabase (ja em uso no projeto gerencial)
+- **Backend de dados:** Supabase (projeto canal_vendedor)
 
 ## Lojas (todas no ES)
 | Loja | Emp | Cidade       | Funcao                         |
@@ -36,26 +36,70 @@ Sistema de comunicacao com a equipe de vendas da Novacenter. Analise dados de ve
 - **Julio:** coord. Loja 7 (Cachoeiro)
 
 ## Fonte de Dados
-Os dados de vendas ja estao sincronizados no Supabase pelo projeto `app_gerencial_seek`:
+
+### Supabase canal_vendedor (este projeto)
+- `mv_clientes_portfolio` — materialized view principal; pre-computada; refresh apos sync
+- `v_vendedores` — view de vendedores com nome (acessivel pela anon key)
+- `vendedores` — perfil + vinculo auth_id <-> ps_vendedor
+- `metas`, `bonus_regras`, `insights`, `mensagens` — tabelas proprias
+
+### Supabase monitor_seek (somente leitura)
 - `vendas_detalhado` — vendas por produto/vendedor/loja (janela de 13 meses)
-- `vendas_por_mes` — consolidado mensal por produto/loja
-- `estatisticas_demanda` — medias, medianas, desvios de demanda
-- `estoque` — posicao de estoque por empresa/produto
-- `produtos` — cadastro de produtos
 - `fabricantes` — cadastro de fabricantes
+- `clientes_tabela` — tabela de preco por cliente
 
-## Funcionalidades Previstas
-1. **Autenticacao:** login/senha individual por vendedor
-2. **Dashboard pessoal:** metricas de vendas do vendedor logado
-3. **Insights automaticos:** analises e recomendacoes baseadas nos dados de vendas
-4. **Comunicacao direcionada:** mensagens/insights segmentados por loja, vendedor ou equipe
-5. **Historico:** acompanhamento da evolucao de desempenho ao longo do tempo
+### Sync
+- Edge Function `sync-dados` copia dados do monitor_seek para o canal_vendedor diariamente
+- Apos sync: chama `refresh_portfolio()` para recalcular a materialized view
 
-## Indicadores-Chave
-- Faturamento (total e por periodo)
-- Margem (% e valor)
-- Custo medio
-- Ticket medio
-- Mix de produtos vendidos
-- Comparativo com periodos anteriores
-- Ranking entre vendedores/lojas
+## Estado Atual da Implementacao
+
+### Implementado e funcionando
+- [x] Frontend Vite + React com Tailwind CSS v4
+- [x] Header com navegacao (Insights, Mapa, Metas, Bonus)
+- [x] PortfolioContext — estado compartilhado (dados, filtros, clientes) entre Insights e Mapa
+- [x] Tela de Portfolio de Clientes (`/insights`)
+  - Tabela agrupada por cliente x fabricante
+  - Expansao por linha com fabricantes
+  - Navegacao por teclado (setas)
+  - Ordenacao por todas as colunas
+  - Filtros inline fixos: Vendedor, Fabricante, Tabela, Rec. min., Media/mes min.
+  - Coluna Potencial (valor_medio_mes dos pares em recorde ou proximo)
+  - Coluna Exec. (% executado por fabricante e agregado por cliente)
+- [x] Tela Mapa de Portfolio (`/mapa`)
+  - Grafico de bolhas D3: X=gap_atual, Y=gap_medio, escala log 1-400d
+  - Tamanho da bolha = potencial (escala sqrt)
+  - Cor por nivel de alerta (recorde/proximo/normal)
+  - Preenchimento verde proporcional ao % realizado (todas as bolhas)
+  - Linha diagonal tracejada (gap_atual = gap_medio)
+  - Zonas de fundo: ativo (verde), em risco (amarelo), inativo (cinza)
+  - d3-force com colisao para evitar sobreposicao
+  - Tooltip com nome, gaps, % ciclo, compras, potencial, % realizado
+  - Checkbox "Ocultar 100% realizados"
+  - Contadores por nivel + potencial total + exec. total da selecao
+  - Filtros compartilhados via PortfolioContext: vendedores, clientes, fabricantes, tabelas, recorrencia, volume
+  - Modo cliente filtrado: uma bolha por fabricante do cliente selecionado (visao de portfolio do cliente)
+  - Duplo clique em bolha de cliente: entra no modo cliente filtrado
+  - Duplo clique em bolha de fabricante: filtra somente aquele fabricante
+- [x] Edge Function sync-dados
+  - Espelho exato: delete + reinsert dos ultimos 7 dias (padrao)
+  - Deduplicacao por id antes do insert
+  - refresh_portfolio() disparado em background (waitUntil) — nao bloqueia resposta
+- [x] Materialized view mv_clientes_portfolio com pct_executado e valor_no_gap
+- [x] Deploy automatico no Netlify (branch main)
+
+### Pendente
+- [ ] Autenticacao real (Supabase Auth + RLS por vendedor)
+- [ ] Tela de Metas
+- [ ] Tela de Bonus
+- [ ] PWA (manifest + service worker)
+- [ ] Visao do coordenador/gerente
+
+## Regras de Desenvolvimento
+- Sempre ler este arquivo e BUSINESS_RULES.md antes de modificar codigo
+- Mudancas pequenas e localizadas — nao refatorar sem pedir
+- Codigo completo e funcional — nao entregar rascunhos
+- Perguntar antes de agir em caso de ambiguidade
+- Nunca alterar tabelas de origem (vendas_detalhado, fabricantes, clientes_tabela sao espelhos)
+- Nunca expor credenciais em commits, logs ou exemplos
+- Nunca inferir regras fiscais ou tributarias

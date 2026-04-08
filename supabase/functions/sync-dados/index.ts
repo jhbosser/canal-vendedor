@@ -112,12 +112,8 @@ Deno.serve(async (req) => {
       if (error) throw new Error(`insert vendas lote ${i}: ${error.message}`)
     }
 
-    // Dispara o refresh em background (não aguarda — evita timeout da edge function)
-    const refreshPromise = local.rpc('refresh_portfolio')
-      .then(({ error }) => { if (error) console.error('refresh_portfolio:', error.message) })
-    // waitUntil mantém o processo vivo para o background task completar
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    ;(globalThis as any).EdgeRuntime?.waitUntil(refreshPromise)
+    // Refresh via SQL com timeout desativado para esta transação
+    const { error: eRefresh } = await local.rpc('refresh_portfolio_sem_timeout')
 
     return new Response(
       JSON.stringify({
@@ -127,7 +123,7 @@ Deno.serve(async (req) => {
         fabricantes_sincronizados: fabsSinc,
         clientes_tabela_sincronizados: tabelaSinc,
         vendas_sincronizadas: vendasUnicas.length,
-        portfolio_refreshed: 'triggered',
+        portfolio_refreshed: eRefresh ? `error: ${eRefresh.message}` : 'ok',
         synced_at: new Date().toISOString(),
       }),
       { headers: { 'Content-Type': 'application/json' } },

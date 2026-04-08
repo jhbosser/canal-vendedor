@@ -145,7 +145,7 @@ Localizada em `supabase/functions/sync-dados/index.ts`.
 ```
 frontend/
 ├── src/
-│   ├── App.jsx              # Rotas: /insights, /mapa, /metas, /bonus
+│   ├── App.jsx              # Rotas: /mapa (ativa), /metas, /bonus (placeholders)
 │   ├── context/
 │   │   ├── AuthContext.jsx  # Autenticacao Supabase
 │   │   └── PortfolioContext.jsx  # Estado compartilhado: dados, filtros, clientesFiltrados
@@ -195,15 +195,20 @@ Estado centralizado compartilhado entre Insights e Mapa:
 - **Duplo clique em bolha de cliente:** entra no modo cliente filtrado (limpa fabricantes, seleciona o cliente)
 - **Duplo clique em bolha de fabricante:** filtra somente aquele fabricante
 
-## Autenticacao (nao implementada ainda)
+## Autenticacao
 
-Planejada via Supabase Auth:
-- Tabela `vendedores` vincula `auth.users.id` ao `ps_vendedor` do ERP
-- RLS filtraria dados por vendedor logado
-- Atualmente: acesso publico via anon key (sem RLS nas views)
+Login proprio via tabela `vendedores` (sem Supabase Auth):
+- Colunas: `username`, `senha_hash` (texto puro), `cargo`, `ativo`
+- AuthContext faz SELECT na tabela com username + senha_hash + ativo=true
+- Sessao salva em localStorage (`canal_user`)
+- Perfis: `proprietario`/`gerente` = Administrador; demais = Usuario
+- RLS desabilitado na tabela `vendedores`
+- Gerenciar Usuarios: CRUD no modal do Header, visivel apenas para Administradores
 
-## Deploy (Netlify)
+## Deploy
 
-- Branch `main` → deploy automatico
-- Variaveis de ambiente: `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY`
-- Build: `npm run build` → `dist/`
+- **URL:** mapa-vendedor.netlify.app
+- **Repositorio:** github.com/jhbosser/canal-vendedor (privado)
+- Branch `main` → deploy automatico no Netlify
+- Variaveis de ambiente Netlify: `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY`
+- Build: `cd frontend && npm run build` → `frontend/dist/`

@@ -7,8 +7,8 @@ Portal web + mobile (PWA) para vendedores da Novacenter. Exibe metas, bonus e in
 - **Stack:** Vite + React (JSX) + Tailwind CSS v4
 - **Deploy:** Netlify (branch main, deploy automatico)
 - **Pasta:** `frontend/`
-- **Rotas:** `src/App.jsx` — /insights, /mapa, /metas, /bonus
-- **Paginas:** `src/pages/` — Insights.jsx, Mapa.jsx, Login.jsx, EmConstrucao.jsx
+- **Rotas:** `src/App.jsx` — /mapa (unica rota ativa; /metas e /bonus sao placeholders)
+- **Paginas:** `src/pages/` — Mapa.jsx, Login.jsx, EmConstrucao.jsx (Insights.jsx existente mas sem rota ativa)
 - **Componentes:** `src/components/` — Header.jsx, FiltroDropdown.jsx
 - **Context:** `src/context/` — AuthContext.jsx, PortfolioContext.jsx (estado compartilhado entre Insights e Mapa)
 - **Supabase client:** `src/lib/supabase.js`
@@ -32,15 +32,24 @@ Definidas em `supabase/migrations/001_tables.sql`:
 - `vendas_detalhado` — espelho do monitor_seek (somente leitura)
 - `fabricantes` — espelho do monitor_seek (somente leitura)
 - `clientes_tabela` — espelho do monitor_seek (somente leitura)
-- `vendedores` — perfil + vinculo auth_id <-> ps_vendedor
+- `vendedores` — autenticacao propria (username + senha_hash); coluna `cargo` (vendedor | coordenador | gerente | proprietario); RLS desabilitado
 - `metas`, `bonus_regras`, `insights`, `mensagens`
+
+## Autenticacao
+- Login proprio via tabela `vendedores` (username + senha_hash em texto puro — sem Supabase Auth)
+- Perfis: `proprietario`/`gerente` = Administrador (acesso total + gerenciar usuarios); demais = Usuario
+- AuthContext: `podeVerTodos()` checa `cargo` (proprietario ou gerente)
+- Gerenciar Usuarios: modal no Header, visivel apenas para Administradores
+- Deploy: mapa-vendedor.netlify.app
 
 ## Edge Function — sync-dados
 `supabase/functions/sync-dados/index.ts`
 - Sincroniza fabricantes e clientes_tabela via upsert
 - Vendas: DELETE + INSERT dos ultimos 7 dias (espelho exato — captura delecoes e correcoes do ERP)
 - Deduplicacao por id antes do insert (monitor_seek pode retornar duplicatas na paginacao)
-- refresh_portfolio() disparado em background via waitUntil (nao bloqueia a resposta HTTP)
+- Chama `refresh_portfolio_sem_timeout()` e AGUARDA conclusao antes de responder (nao usa background)
+- `refresh_portfolio_sem_timeout()`: funcao SQL com SET LOCAL statement_timeout=0 — criada manualmente no banco
+- Banco configurado com `ALTER ROLE postgres/authenticator SET statement_timeout='300s'`
 - Secrets: MONITOR_SEEK_URL, MONITOR_SEEK_SERVICE_KEY
 
 ## Logica de Insights (regras criticas)

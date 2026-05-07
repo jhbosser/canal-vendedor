@@ -84,8 +84,11 @@ GRANT EXECUTE ON FUNCTION trigger_sync(text, text) TO anon, authenticated;
 
 -- =============================================================================
 -- Cron jobs (horarios em UTC; SP = UTC-3)
---   06:00 UTC = 03:00 SP
---   15:00 UTC = 12:00 SP
+--   06:45 UTC = 03:45 SP
+--   15:45 UTC = 12:45 SP
+-- Defasagem de 45 min em relacao ao sync do app_gerencial_seek (03h e 12h),
+-- que demora ~25 min — garante que monitor_seek ja terminou a escrita
+-- antes do canal_vendedor copiar os dados.
 -- Reaplica idempotente: remove jobs anteriores com mesmo nome antes de criar
 -- =============================================================================
 
@@ -101,14 +104,38 @@ BEGIN
 EXCEPTION WHEN OTHERS THEN NULL;
 END $$;
 
+DO $$
+BEGIN
+  PERFORM cron.unschedule('sync-canal-vendedor-03h30');
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
+
+DO $$
+BEGIN
+  PERFORM cron.unschedule('sync-canal-vendedor-12h30');
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
+
+DO $$
+BEGIN
+  PERFORM cron.unschedule('sync-canal-vendedor-03h45');
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
+
+DO $$
+BEGIN
+  PERFORM cron.unschedule('sync-canal-vendedor-12h45');
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
+
 SELECT cron.schedule(
-  'sync-canal-vendedor-03h',
-  '0 6 * * *',
+  'sync-canal-vendedor-03h45',
+  '45 6 * * *',
   $cron$ SELECT trigger_sync('agendado', 'scheduler') $cron$
 );
 
 SELECT cron.schedule(
-  'sync-canal-vendedor-12h',
-  '0 15 * * *',
+  'sync-canal-vendedor-12h45',
+  '45 15 * * *',
   $cron$ SELECT trigger_sync('agendado', 'scheduler') $cron$
 );

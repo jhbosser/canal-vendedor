@@ -84,7 +84,7 @@ export default function Dados() {
           Dados
         </h1>
         <p className="text-sm text-gray-500">
-          Sincronização do Seek com o Supabase. Roda automaticamente às 03h e 12h.
+          Sincronização do Seek com o Supabase. Roda automaticamente às 03h45 e 12h45.
         </p>
       </div>
 
@@ -188,7 +188,7 @@ export default function Dados() {
       </div>
 
       <p className="text-xs text-gray-400 mt-3">
-        Agendamento automático às 03h e 12h (horário de Brasília). Para forçar, use "Atualizar agora".
+        Agendamento automático às 03h45 e 12h45 (horário de Brasília). Para forçar, use "Atualizar agora".
       </p>
     </div>
   );

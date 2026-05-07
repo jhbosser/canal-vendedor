@@ -13,7 +13,7 @@ Igual ao app_gerencial_seek, mas sem servidor Windows: a fila + agendamento roda
 
 ## Fluxo
 
-1. Cron (`0 6 * * *` e `0 15 * * *` UTC = 03h/12h SP) ou botão "Atualizar agora" no app chamam `trigger_sync(tipo, criado_por)`.
+1. Cron (`0 6 * * *` e `0 15 * * *` UTC = 03h45/12h45 SP) ou botão "Atualizar agora" no app chamam `trigger_sync(tipo, criado_por)`.
 2. `trigger_sync` insere registro `pending` em `sync_executions` e dispara a Edge Function via `net.http_post` passando `exec_id`.
 3. Edge Function marca `running` + `started_at`, executa o sync atual, e ao terminar grava `done` + `finished_at` + `duracao_seg` (ou `error` + `erro` com stack).
 4. Frontend faz polling de 10s na tabela e mostra status + histórico.

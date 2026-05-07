@@ -12,10 +12,12 @@ import {
   Plus,
   ArrowLeft,
   Pencil,
+  Database,
 } from 'lucide-react';
 
 const navItems = [
   { name: 'Mapa', to: '/mapa', icon: BarChart2 },
+  { name: 'Dados', to: '/dados', icon: Database, adminOnly: true },
 ];
 
 const PERFIS = [
@@ -50,6 +52,8 @@ export default function Header() {
   const [gerSalvando, setGerSalvando] = useState(false);
   const [gerSucesso, setGerSucesso] = useState(false);
 
+  const visibleNavItems = navItems.filter((item) => !item.adminOnly || podeVerTodos());
+
   // Cmd/Ctrl + ArrowLeft/Right para navegar entre abas
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -58,19 +62,19 @@ export default function Header() {
       const tag = e.target?.tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA') return;
 
-      const currentIndex = navItems.findIndex((item) => location.pathname === item.to);
+      const currentIndex = visibleNavItems.findIndex((item) => location.pathname === item.to);
       if (currentIndex === -1) return;
 
       e.preventDefault();
       if (e.key === 'ArrowRight') {
-        navigate(navItems[(currentIndex + 1) % navItems.length].to);
+        navigate(visibleNavItems[(currentIndex + 1) % visibleNavItems.length].to);
       } else {
-        navigate(navItems[(currentIndex - 1 + navItems.length) % navItems.length].to);
+        navigate(visibleNavItems[(currentIndex - 1 + visibleNavItems.length) % visibleNavItems.length].to);
       }
     };
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [location.pathname, navigate]);
+  }, [location.pathname, navigate, visibleNavItems]);
 
   const abrirGerenciar = async () => {
     setShowUserMenu(false);
@@ -202,7 +206,7 @@ export default function Header() {
 
         {/* Nav tabs */}
         <nav className="flex-1 flex items-center gap-1">
-          {navItems.map((item) => {
+          {visibleNavItems.map((item) => {
             const Icon = item.icon;
             return (
               <NavLink

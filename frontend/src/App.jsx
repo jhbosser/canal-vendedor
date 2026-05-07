@@ -5,6 +5,7 @@ import { PortfolioProvider } from './context/PortfolioContext';
 import Header from './components/Header';
 import Login from './pages/Login';
 import Mapa from './pages/Mapa';
+import Dados from './pages/Dados';
 import EmConstrucao from './pages/EmConstrucao';
 
 function ScrollToTop() {
@@ -13,6 +14,11 @@ function ScrollToTop() {
     document.getElementById('main-scroll')?.scrollTo(0, 0);
   }, [pathname]);
   return null;
+}
+
+function AdminRoute({ children }) {
+  const { podeVerTodos } = useAuth();
+  return podeVerTodos() ? children : <Navigate to="/mapa" replace />;
 }
 
 function AppRoutes() {
@@ -38,6 +44,7 @@ function AppRoutes() {
           <Route path="/mapa"  element={<Mapa />} />
           <Route path="/metas" element={<EmConstrucao titulo="Metas" />} />
           <Route path="/bonus" element={<EmConstrucao titulo="Bônus" />} />
+          <Route path="/dados" element={<AdminRoute><Dados /></AdminRoute>} />
           <Route path="*"      element={<Navigate to="/mapa" replace />} />
         </Routes>
       </main>
